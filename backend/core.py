@@ -2,7 +2,9 @@ import os
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
+from langchain.chains import ConversationalRetrievalChain
 from langchain.vectorstores import Pinecone
+
 import pinecone
 
 pinecone.init(
@@ -13,15 +15,20 @@ pinecone.init(
 INDEX_NAME = "langchain-doc-index"
 
 
-def run_llm(query: str) -> any:
+def run_llm(query: str, chat_history: list[dict[str, any]]=[]) -> any:
     embeddings = OpenAIEmbeddings()
     docsearch = Pinecone.from_existing_index(index_name=INDEX_NAME, embedding=embeddings)
     chat = ChatOpenAI(verbose=True, temperature=0)
-    qa = RetrievalQA.from_chain_type(llm=chat,
-                                     chain_type="stuff",
-                                     retriever=docsearch.as_retriever(),
-                                     return_source_documents=True)
-    return qa({"query": query})
+    # qa = RetrievalQA.from_chain_type(llm=chat,
+    #                                  chain_type="stuff",
+    #                                  retriever=docsearch.as_retriever(),
+    #                                  return_source_documents=True)
+
+    qa = ConversationalRetrievalChain.from_llm(llm=chat,
+                                               retriever=docsearch.as_retriever(),
+                                               return_source_documents=True)
+
+    return qa({"question": query, "chat_history": chat_history})
 
 
 if __name__ == "__main__":
